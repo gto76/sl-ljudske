@@ -1,0 +1,6 @@
+#!/bin/bash
+#
+# Usage: run 
+# Generates all files needed by index.html, and saves them in js directory.
+
+./indexSongs.scala input-data/pesmi.xml input-data/SloveneLexicon.txt input-data/stopwords

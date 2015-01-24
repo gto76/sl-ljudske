@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+
+<style>
+section {
+    line-height:30px;
+    width:450px;
+    float:left;
+    padding-left:40px; 
+    padding-top:15px; 
+	overflow-y: scroll;
+	height:96vh;
+}
+aside {
+    width:350px;
+    float:left;
+    padding:10px; 
+}
+.link {
+  stroke: #ccc;
+}
+.node text {
+  pointer-events: none;
+  font: 10px sans-serif;
+}
+</style>
+
+<script src="lib/d3.v3.min.js"></script>
+<script src="js/inverted-index.js"></script>
+<script src="js/pesmi.js"></script>
+<script src="js/distances.js"></script>
+</head>
+
+
+<body>
+
+<section>
+<h1>Slovenske Ljudske</h1>
+
+<input type="text" id="phrase" onkeydown="if (event.keyCode == 13) search()">
+<button type="button" onclick="search()">Search</button>
+
+<p id="results">Search results will show here</p>
+
+<script>
+
+// CONST:
+NUMBER_OF_MATCHES = 20
+
+// LOAD DATA:
+songs = JSON.parse(pesmi);
+index = JSON.parse(invertedIndex);
+distances = JSON.parse(cosinusDistances);
+
+
+//#########################
+//##### MAIN FUNCTION #####
+//#########################
+
+function search() {
+	// GET QUERY RESULTS:
+	var query = document.getElementById("phrase").value;
+    matches = index.words[query];
+	var ids = getIds(matches)
+
+	// PROCESS QUERY RESULTS:
+	json = {}
+	json.nodes = []
+	json.links = []
+	var setOfMatchedDocuments = {};
+	var text = "";
+	for	(var i = 0; i < ids.length; i++) {
+		var id = ids[i]
+		var title = getTitle(id)
+		var versionText = getVersionText(id)
+		var versionTextDecoded = decodeEscapedCharacters(versionText)
+		var versionText = versionText.replace(/[0-9]/g, "")
+
+		///////
+		var tmpText = versionText.replace(/[\n\t,\.\-«»!:…™§?†®/()']/g, " ") 
+		var tmpText = tmpText.replace(/[ ]+/g, " ") 
+		var tmpText = tmpText.replace(/^ /g, "") 
+		var words = tmpText.split(" ")
+
+		//
+		var setOfMatchedWords = {};
+		for (var x in matches[i].locations) {
+			var location = matches[i].locations[x]; 
+			var matchedWord = words[location]
+			setOfMatchedWords[matchedWord] = true;
+		}
+		//
+
+		var words = [];
+		for(var k in setOfMatchedWords) words.push(k);
+
+		for (var x in words) {
+			var matchedWord = words[x]
+			var re = new RegExp(matchedWord,"g");
+			versionTextDecoded = versionTextDecoded.replace(re, "<mark>"+matchedWord+"</mark>")
+		}
+
+		// Append text:
+		text += "<br>"+title+" ("+getVersionId(id)+")<br><br>"+versionTextDecoded+"<br><br><br>";
+		// Save visualization data:
+		setOfMatchedDocuments[id] = true
+		setOfMatchedDocuments[getSongId(id)] = true
+	}
+
+	// PRINT MATCHING SONGS:
+    document.getElementById("results").innerHTML = text;
+	// SET DATA FOR VISUALIZATION:
+	setDataForVisualization(setOfMatchedDocuments, ids)
+	// RESET VISUALISATION:
+	resetVisualization()
+}
+
+
+//#########################
+//####### UTILITIES #######
+//#########################
+
+// INDEX UTIL:
+
+function getIds(matches) {
+	var ids = []
+	var x;
+	for (x in matches) {
+		ids[ids.length] = matches[x].id; 
+		if (x > NUMBER_OF_MATCHES) break
+	}
+	return ids
+}
+
+// QUERY UTIL:
+
+function getTitle(id) {
+	var songId = getSongId(id);
+	var title = songs.dokument[songId].ime;
+	return title;
+}
+
+function getVersionText(id) {
+	var songId = getSongId(id)
+	var versionId= getVersionId(id)
+	var versionText = songs.dokument[songId].pesmi[versionId].besedilo;
+	return versionText;
+}
+
+// ID UTIL:
+
+function getSongId(id) {
+	var ids = id.split("-");	
+	return ids[0];
+}
+
+function getVersionId(id) {
+	var ids = id.split("-");	
+	return ids[1];
+}
+
+// TEXT UTIL:
+
+function decodeEscapedCharacters(text) {
+	var text = text.replace(/[0-9]/g, "")
+	var text = text.replace(/\n/g, "<br>")
+	var text = text.replace(/\t/g, "&nbsp&nbsp&nbsp&nbsp")
+	return text
+}
+
+// VISUALIZATION UTIL:
+
+function setDataForVisualization(setOfMatchedDocuments, ids) {
+	// Example of data: 
+	// json = {nodes:[{name:"ena", group:1},{name:"dva", group:1}],
+	//         links:[{source:0, target:1, value:1}]};
+
+	// Assing value to every matched document and put it into json.nodes array
+	var mapOfMatchedDocuments = {}
+	var matchedDocuments = Object.keys(setOfMatchedDocuments);
+	for (var x in matchedDocuments) {
+		var matchedDocument = matchedDocuments[x]
+		mapOfMatchedDocuments[matchedDocument] = x
+		var nodesTitle = getNodesTitle(matchedDocument)
+		var group = getSongId(matchedDocument)
+		json.nodes.push({name: nodesTitle, group: group})
+	}
+	// Declare links between songs and theirs versions
+	for (var x in ids) {
+		var id = ids[x]
+		var songVisualizationId = mapOfMatchedDocuments[getSongId(id)]
+		var versionVisualizationId = mapOfMatchedDocuments[id]
+		json.links.push({source: +songVisualizationId, target: +versionVisualizationId, value:1})
+	}
+	// Get Songs:
+	var setOfSongs = {}
+	for (var x in matchedDocuments) {
+		var matchedDocument = matchedDocuments[x]
+		setOfSongs[getSongId(matchedDocument)] = true
+	}
+	var matchedSongs = Object.keys(setOfSongs);
+	// Declare links between different songs
+	for (var i = 0; i < matchedSongs.length-1; i++) {
+		for (var j = i+1; j < matchedSongs.length-1; j++) {
+			var id1 = matchedSongs[i]
+			var id2 = matchedSongs[j]
+			var song1 = mapOfMatchedDocuments[id1]
+			var song2 = mapOfMatchedDocuments[id2]
+
+			distance = 1
+			if (id1 in distances.distances) {
+				distance = distances.distances[id1][id2]
+			} 
+			if (id2 in distances.distances) {
+				distance = distances.distances[id2][id1]
+			}
+			distance =Math.round( 1/distance );
+			json.links.push({source: +song1, target: +song2, value: +distance})
+		}
+	}
+
+}
+
+function getNodesTitle(id) {
+	var ids = id.split("-")
+	if (ids.length == 1) {
+		var title = songs.dokument[id].ime;
+		return title
+	} else {
+		return ids[1]
+	}
+}
+
+function resetVisualization() {
+	if(!(typeof node === 'undefined')){
+		graphRemove()
+ 	};
+	graphInit()
+}
+
+</script>
+</section>
+
+
+<aside>
+<script>
+
+
+//########################
+//######### D3JS #########
+//########################
+
+function graphInit() {
+	var width = 700,
+		height = 600
+
+	var color = d3.scale.category20();
+
+	svg = d3.select("body").append("svg")
+		.attr("width", width)
+		.attr("height", height);
+
+	force = d3.layout.force()
+		.gravity(.05)
+		.distance(100)
+		.charge(-100)
+		.size([width, height]);
+
+	force
+	  .nodes(json.nodes)
+	  .links(json.links)
+	  .start();
+
+	link = svg.selectAll(".link")
+	  .data(json.links)
+	.enter().append("line")
+	  .attr("class", "link")
+      .style("stroke-width", function(d) { return Math.sqrt(d.value); });
+
+	node = svg.selectAll(".node")
+	  .data(json.nodes)
+	.enter().append("g")
+	  .attr("class", "node")
+	  .call(force.drag);
+
+
+	node.append("circle")
+	  .attr("class", "node")
+	  .attr("r", 8)
+	  .style("fill", function(d) { return color(d.group); })
+
+	node.append("text")
+	  .attr("dx", 8)
+	  .attr("dy", ".60em")
+	  .text(function(d) { return d.name });
+
+	force.on("tick", function() {
+	link.attr("x1", function(d) { return d.source.x; })
+		.attr("y1", function(d) { return d.source.y; })
+		.attr("x2", function(d) { return d.target.x; })
+		.attr("y2", function(d) { return d.target.y; });
+
+	node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+	});
+}
+
+function graphRemove(){
+    node.remove();
+    link.remove();
+    svg.remove();
+    nodes = [];
+    links = [];
+}
+
+
+</script>
+</aside>
+
+</body>
+</html> 
+
