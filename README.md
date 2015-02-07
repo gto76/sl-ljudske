@@ -2,24 +2,22 @@
 Slovenske Ljudske
 -----------------
 
-A search engine of a subset of Slovene Folk Songs.
+A [search engine] (http://gto76.github.io/sl-ljudske/index.html) of a subset of Slovene Folk Songs.
 
-[webpage] (http://gto76.github.io/sl-ljudske/index.html)
+#### Short list of features
+* Inverted index,
+* lemmatization,
+* stopword removal,
+* cosine distance,
+* visualization of the matches.
 
-* Short list of features:
-Inverted index,
-lemmatization,
-stopword removal,
-cosine distance,
-visualization of the matches.
+#### Libraries used
+* d3js - Javascript library used for the visualization
 
-* Libraries used:
-d3js - Javascript library used for the visualization
+#### Interesting findings
+* Most frequent word is mother (mati)
 
-* Interesting findings:
-Most frequent word is mother (mati)
-
-* How to generate webpage:
+#### How to generate webpage
 ```
 $ cd scala
 $ ./run
