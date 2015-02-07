@@ -11,7 +11,7 @@ A [search engine] (http://gto76.github.io/sl-ljudske/index.html) of a subset of 
 * cosine distance,
 * visualization of the matches.
 
-#### Libraries used
+#### Used libraries
 * d3js - Javascript library used for the visualization
 
 #### Interesting findings
@@ -22,4 +22,4 @@ A [search engine] (http://gto76.github.io/sl-ljudske/index.html) of a subset of 
 $ cd scala
 $ ./run
 ```
->Script called `run` starts a script called `indexSongs.scala` with predefined parameters, namely the names of the files in folder `input-data`. It generates three js files and stores them in `js` folder. Details are described in at the start of the `indexSongs.scala` script.
+Script called `run` starts a script called `indexSongs.scala` with predefined parameters, namely the names of the files in folder `input-data`. It generates three js files and stores them in `js` folder. Details are described in at the start of the `indexSongs.scala` script.
