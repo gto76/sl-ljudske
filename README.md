@@ -1,7 +1,7 @@
 Slovenske Ljudske
 =================
 
-#### A [search engine] (http://gto76.github.io/sl-ljudske/index.html) of a subset of Slovene Folk Songs.
+#### A [search engine](http://gto76.github.io/sl-ljudske/index.html) of a subset of Slovene Folk Songs.
 
 ### Short list of features
 * Inverted index,
